@@ -1,4 +1,3 @@
-import * as soap from "soap";
 import { XMLParser } from "fast-xml-parser";
 import { type AccessTicket } from "./access-ticket";
 import type { TicketStorage } from "../storage/ticket-storage";
@@ -9,6 +8,7 @@ import { buildTra } from "./tra-builder";
 import { type Environment, ENDPOINTS } from "../../config/endpoints";
 import { WsaaError } from "../errors/wsaa";
 import { SoapError } from "../errors/soap";
+import { createSoapClient } from "../soap/client";
 import { type Logger, noopLogger } from "../logging/logger";
 
 export type LoginCmsFn = (endpoint: string, cmsBase64: string) => Promise<string>;
@@ -26,12 +26,14 @@ export interface WsaaClientOptions {
 }
 
 async function defaultLoginCmsFn(endpoint: string, cmsBase64: string): Promise<string> {
-  const client = await soap.createClientAsync(`${endpoint}?wsdl`);
-  const call = client as unknown as {
-    loginCmsAsync: (args: { in0: string }) => Promise<[{ loginCmsReturn?: string }]>;
-  };
-  const result = await call.loginCmsAsync({ in0: cmsBase64 });
-  return result[0].loginCmsReturn ?? "";
+  const soapClient = await createSoapClient({
+    wsdl: { url: `${endpoint}?wsdl` },
+    endpoint,
+  });
+  const result = await soapClient.call<{ loginCmsReturn?: string }>("loginCms", {
+    in0: cmsBase64,
+  });
+  return result.loginCmsReturn ?? "";
 }
 
 export class WsaaClient {
@@ -132,29 +134,32 @@ export class WsaaClient {
   }
 
   private mapSoapErrorToWsaa(err: unknown): WsaaError | SoapError {
+    if (err instanceof SoapError) {
+      if (err.code === "SOAP.FAULT") {
+        const fault = err.context?.["fault"] as { faultstring?: string } | undefined;
+        if (fault?.faultstring) return this.mapFaultString(fault.faultstring, err);
+      }
+      return err;
+    }
     const e = err as {
       message?: string;
       root?: { Envelope?: { Body?: { Fault?: { faultstring?: string } } } };
     };
     const faultString = e?.root?.Envelope?.Body?.Fault?.faultstring;
-    if (faultString) {
-      if (/vigente|has not expired/i.test(faultString)) {
-        return new WsaaError("WSAA.TICKET_STILL_VALID", {
-          message: faultString,
-          cause: err,
-        });
-      }
-      if (/expir/i.test(faultString)) {
-        return new WsaaError("WSAA.TRA_EXPIRED", {
-          message: faultString,
-          cause: err,
-        });
-      }
-      return new WsaaError("WSAA.FAULT", { message: faultString, cause: err });
-    }
+    if (faultString) return this.mapFaultString(faultString, err);
     return new SoapError("SOAP.NETWORK", {
       message: e?.message ?? "SOAP transport error",
       cause: err,
     });
+  }
+
+  private mapFaultString(faultstring: string, cause: unknown): WsaaError {
+    if (/vigente|has not expired/i.test(faultstring)) {
+      return new WsaaError("WSAA.TICKET_STILL_VALID", { message: faultstring, cause });
+    }
+    if (/expir/i.test(faultstring)) {
+      return new WsaaError("WSAA.TRA_EXPIRED", { message: faultstring, cause });
+    }
+    return new WsaaError("WSAA.FAULT", { message: faultstring, cause });
   }
 }
