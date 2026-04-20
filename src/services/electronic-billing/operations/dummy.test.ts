@@ -8,20 +8,26 @@ function makeClient(response: unknown): { client: SoapClient; call: ReturnType<t
 }
 
 describe("dummy (FEDummy)", () => {
-  it("calls FEDummy with no args and returns the result", async () => {
+  it("calls FEDummy with no args and unwraps FEDummyResult", async () => {
     const { client, call } = makeClient({
-      AppServer: "OK",
-      DbServer: "OK",
-      AuthServer: "OK",
+      FEDummyResult: { AppServer: "OK", DbServer: "OK", AuthServer: "OK" },
     });
     const result = await dummy(client);
     expect(call).toHaveBeenCalledWith("FEDummy", {});
     expect(result).toEqual({ AppServer: "OK", DbServer: "OK", AuthServer: "OK" });
   });
 
-  it("forwards degraded responses without transformation", async () => {
-    const { client } = makeClient({ AppServer: "OK", DbServer: "NO", AuthServer: "OK" });
+  it("forwards degraded statuses", async () => {
+    const { client } = makeClient({
+      FEDummyResult: { AppServer: "OK", DbServer: "NO", AuthServer: "OK" },
+    });
     const result = await dummy(client);
     expect(result.DbServer).toBe("NO");
+  });
+
+  it("returns NO for all fields when response is empty", async () => {
+    const { client } = makeClient({});
+    const result = await dummy(client);
+    expect(result).toEqual({ AppServer: "NO", DbServer: "NO", AuthServer: "NO" });
   });
 });

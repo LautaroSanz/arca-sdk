@@ -7,7 +7,7 @@ afterEach(() => {
 
 describe("public API shape", () => {
   it("exports SDK_VERSION", () => {
-    expect(publicApi.SDK_VERSION).toBe("0.6.0");
+    expect(publicApi.SDK_VERSION).toBe("0.6.1");
   });
 
   it("exports Arca class", () => {

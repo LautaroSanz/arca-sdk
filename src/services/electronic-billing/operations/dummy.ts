@@ -6,6 +6,11 @@ export interface DummyResult {
   AuthServer: "OK" | "NO";
 }
 
+interface RawResponse {
+  FEDummyResult?: DummyResult;
+}
+
 export async function dummy(client: SoapClient): Promise<DummyResult> {
-  return client.call<DummyResult>("FEDummy", {});
+  const res = await client.call<RawResponse>("FEDummy", {});
+  return res.FEDummyResult ?? { AppServer: "NO", DbServer: "NO", AuthServer: "NO" };
 }

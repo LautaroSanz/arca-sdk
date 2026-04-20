@@ -149,7 +149,18 @@ pnpm run test:watch  # vitest watch
 pnpm run typecheck   # tsc --noEmit
 pnpm run lint        # eslint
 pnpm run format      # prettier
+pnpm run smoke       # valida conectividad con ARCA (4 dummy endpoints)
 ```
+
+### Smoke test
+
+`pnpm run smoke` llama los 4 endpoints dummy (FEDummy, FEXDummy, WSMTXCA dummy, ComprobanteDummy). No requiere certificados — los dummies no usan auth. Sirve para verificar que:
+
+- Los endpoints de ARCA homologacion estan alcanzables
+- El SDK puede parsear las respuestas
+- La infraestructura SOAP + WSDL funciona
+
+Env vars opcionales: `ARCA_ENV` (`testing` | `production`, default `testing`), `ARCA_CUIT` (dummy para construir el objeto).
 
 ## Estructura
 

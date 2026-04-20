@@ -74,7 +74,7 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.6.0" as const;
+export const SDK_VERSION = "0.6.1" as const;
 
 export type ServiceWsdlKey =
   | "wsfev1"
@@ -100,7 +100,7 @@ export async function fetchWsdls(environment: Environment): Promise<ServiceWsdls
   ];
   const entries = await Promise.all(
     keys.map(async (key) => {
-      const url = `${eps[key]}?WSDL`;
+      const url = `${eps[key]}?wsdl`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch WSDL for ${key}: HTTP ${response.status}`);
@@ -192,7 +192,7 @@ export class Arca {
       const endpoint = endpoints[serviceKey];
       const inlineWsdl = opts.wsdls?.[serviceKey];
       p = createSoapClient({
-        wsdl: inlineWsdl ?? { url: `${endpoint}?WSDL` },
+        wsdl: inlineWsdl ?? { url: `${endpoint}?wsdl` },
         endpoint,
       });
       rawClients.set(serviceKey, p);

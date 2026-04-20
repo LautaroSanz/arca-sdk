@@ -6,6 +6,11 @@ export interface CdcDummyResult {
   AuthServer: "OK" | "NO";
 }
 
+interface RawResponse {
+  ComprobanteDummyResult?: CdcDummyResult;
+}
+
 export async function cdcDummy(client: SoapClient): Promise<CdcDummyResult> {
-  return client.call<CdcDummyResult>("ComprobanteDummy", {});
+  const res = await client.call<RawResponse>("ComprobanteDummy", {});
+  return res.ComprobanteDummyResult ?? { AppServer: "NO", DbServer: "NO", AuthServer: "NO" };
 }
