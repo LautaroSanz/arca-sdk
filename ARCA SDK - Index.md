@@ -17,6 +17,7 @@ Documentacion transversal que rige como construimos el SDK.
 - [[Roadmap]] — fases de implementacion en orden
 - [[Stack Tecnologico]] — librerias y herramientas elegidas
 - [[Estrategia de Testing]] — unit, integration, contract
+- [[Estrategia de Commits]] — por que commiteamos por fase del roadmap
 - [[Modelo de Errores]] — jerarquia y reglas de manejo
 - [[Versionado y API Publica]] — semver y superficie estable
 
