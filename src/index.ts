@@ -35,6 +35,16 @@ import type {
 } from "./services/export-billing/operations/last-cmp";
 import type { FexDummyResult } from "./services/export-billing/operations/dummy";
 import type { FEXResultCotiz } from "./services/export-billing/types/response";
+import { mtxcaDummy } from "./services/detailed-billing/operations/dummy";
+import { mtxcaAutorizar } from "./services/detailed-billing/operations/autorizar";
+import { mtxcaUltimoAutorizado } from "./services/detailed-billing/operations/ultimo-autorizado";
+import type { MtxcaDummyResult } from "./services/detailed-billing/operations/dummy";
+import type { MtxcaAutorizarResult } from "./services/detailed-billing/operations/autorizar";
+import type {
+  MtxcaUltimoInput,
+  MtxcaUltimoResult,
+} from "./services/detailed-billing/operations/ultimo-autorizado";
+import type { ComprobanteCAERequest } from "./services/detailed-billing/types/request";
 import type {
   FeCaeSolicitarInput,
   FeCaeSolicitarResult,
@@ -59,7 +69,7 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.3.0" as const;
+export const SDK_VERSION = "0.4.0" as const;
 
 export interface ArcaOptions {
   cuit: string;
@@ -104,10 +114,17 @@ export interface ExportBillingService {
   cotizacion(monId: string): Promise<FEXResultCotiz>;
 }
 
+export interface DetailedBillingService {
+  dummy(): Promise<MtxcaDummyResult>;
+  createInvoice(input: ComprobanteCAERequest): Promise<MtxcaAutorizarResult>;
+  lastAuthorized(input: MtxcaUltimoInput): Promise<MtxcaUltimoResult>;
+}
+
 export class Arca {
   readonly electronicBilling: ElectronicBillingService;
   readonly register: RegisterService;
   readonly exportBilling: ExportBillingService;
+  readonly detailedBilling: DetailedBillingService;
 
   constructor(opts: ArcaOptions) {
     const wsaa = new WsaaClient({
@@ -179,6 +196,20 @@ export class Arca {
       lastId: async () => fexLastId(await getFexAuthed()),
       cotizacion: async (monId) => fexCotizacion(await getFexAuthed(), monId),
     };
+
+    let mtxcaAuthed: SoapClient | null = null;
+    const getMtxcaAuthed = async (): Promise<SoapClient> => {
+      if (mtxcaAuthed) return mtxcaAuthed;
+      const raw = await getRaw(endpoints.wsmtxca);
+      mtxcaAuthed = withAuth({ soap: raw, wsaa, service: "wsmtxca" });
+      return mtxcaAuthed;
+    };
+
+    this.detailedBilling = {
+      dummy: async () => mtxcaDummy(await getMtxcaAuthed()),
+      createInvoice: async (input) => mtxcaAutorizar(await getMtxcaAuthed(), input),
+      lastAuthorized: async (input) => mtxcaUltimoAutorizado(await getMtxcaAuthed(), input),
+    };
   }
 }
 
@@ -221,6 +252,7 @@ export {
   WsfeError,
   WsfexError,
   WsPadronError,
+  WsMtxcaError,
   TimeSkewError,
   isRetryable,
 } from "./core/errors";
@@ -236,6 +268,8 @@ export type {
   WsfexErrorOptions,
   WsPadronErrorCode,
   WsPadronErrorOptions,
+  WsMtxcaErrorCode,
+  WsMtxcaErrorOptions,
 } from "./core/errors";
 
 export type {
@@ -264,6 +298,25 @@ export type {
   FexLastCmpResult,
 } from "./services/export-billing/operations/last-cmp";
 export type { FexDummyResult } from "./services/export-billing/operations/dummy";
+
+export type {
+  ComprobanteCAERequest,
+  ItemDetalle,
+  CuotaIva,
+  SubtotalIVA,
+  OtroTributo,
+} from "./services/detailed-billing/types/request";
+export type {
+  ComprobanteCAEResponse,
+  MtxcaApiError,
+  MtxcaEvento,
+} from "./services/detailed-billing/types/response";
+export type { MtxcaDummyResult } from "./services/detailed-billing/operations/dummy";
+export type { MtxcaAutorizarResult } from "./services/detailed-billing/operations/autorizar";
+export type {
+  MtxcaUltimoInput,
+  MtxcaUltimoResult,
+} from "./services/detailed-billing/operations/ultimo-autorizado";
 
 export type {
   PersonaReturn,

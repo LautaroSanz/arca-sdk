@@ -14,6 +14,9 @@ export {
   WsPadronError,
   type WsPadronErrorCode,
   type WsPadronErrorOptions,
+  WsMtxcaError,
+  type WsMtxcaErrorCode,
+  type WsMtxcaErrorOptions,
 } from "./wsn";
 export { TimeSkewError, type TimeSkewErrorOptions } from "./time";
 export { isRetryable } from "./retry";

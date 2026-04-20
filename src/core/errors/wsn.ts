@@ -64,3 +64,24 @@ export class WsPadronError extends WsnError {
     this.code = code;
   }
 }
+
+export type WsMtxcaErrorCode = `MTXCA.${string}`;
+
+export interface WsMtxcaErrorOptions {
+  message?: string;
+  cause?: unknown;
+  context?: Record<string, unknown>;
+}
+
+export class WsMtxcaError extends WsnError {
+  readonly code: WsMtxcaErrorCode;
+
+  constructor(code: WsMtxcaErrorCode, opts: WsMtxcaErrorOptions = {}) {
+    super({
+      message: opts.message ?? code,
+      cause: opts.cause,
+      context: opts.context,
+    });
+    this.code = code;
+  }
+}
