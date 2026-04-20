@@ -81,6 +81,27 @@ const result = await arca.electronicBilling.createInvoice({
 console.log(result.FeDetResp[0].CAE);
 ```
 
+## WSDLs embebidos (serverless / cold-start)
+
+Por default el SDK fetchea el WSDL de cada servicio al primer uso (`${endpoint}?WSDL`). En serverless o ambientes con egress restringido conviene precargarlos:
+
+```typescript
+import { Arca, fetchWsdls } from "arca-sdk";
+
+// Una vez por proceso/contenedor
+const wsdls = await fetchWsdls("production");
+
+const arca = new Arca({
+  cuit,
+  cert,
+  key,
+  environment: "production",
+  wsdls,
+});
+```
+
+El objeto `wsdls` es `Partial<Record<ServiceWsdlKey, string>>` — podes pasar solo los servicios que usas.
+
 ## Storage persistente
 
 Por default el ticket se cachea en memoria. Para persistir en disco:

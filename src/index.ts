@@ -74,7 +74,42 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.5.0" as const;
+export const SDK_VERSION = "0.6.0" as const;
+
+export type ServiceWsdlKey =
+  | "wsfev1"
+  | "wsfexv1"
+  | "wsmtxca"
+  | "wscdc"
+  | "padronA4"
+  | "padronA10"
+  | "padronA13";
+
+export type ServiceWsdls = Partial<Record<ServiceWsdlKey, string>>;
+
+export async function fetchWsdls(environment: Environment): Promise<ServiceWsdls> {
+  const eps = ENDPOINTS[environment];
+  const keys: ServiceWsdlKey[] = [
+    "wsfev1",
+    "wsfexv1",
+    "wsmtxca",
+    "wscdc",
+    "padronA4",
+    "padronA10",
+    "padronA13",
+  ];
+  const entries = await Promise.all(
+    keys.map(async (key) => {
+      const url = `${eps[key]}?WSDL`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch WSDL for ${key}: HTTP ${response.status}`);
+      }
+      return [key, await response.text()] as const;
+    }),
+  );
+  return Object.fromEntries(entries) as ServiceWsdls;
+}
 
 export interface ArcaOptions {
   cuit: string;
@@ -84,6 +119,7 @@ export interface ArcaOptions {
   storage?: TicketStorage;
   clock?: NtpClock;
   logger?: Logger;
+  wsdls?: ServiceWsdls;
 }
 
 export interface ElectronicBillingParams {
@@ -149,22 +185,24 @@ export class Arca {
     });
 
     const endpoints = ENDPOINTS[opts.environment];
-    const rawClients = new Map<string, Promise<SoapClient>>();
-    const getRaw = (endpoint: string): Promise<SoapClient> => {
-      let p = rawClients.get(endpoint);
+    const rawClients = new Map<ServiceWsdlKey, Promise<SoapClient>>();
+    const getRaw = (serviceKey: ServiceWsdlKey): Promise<SoapClient> => {
+      let p = rawClients.get(serviceKey);
       if (p) return p;
+      const endpoint = endpoints[serviceKey];
+      const inlineWsdl = opts.wsdls?.[serviceKey];
       p = createSoapClient({
-        wsdl: { url: `${endpoint}?WSDL` },
+        wsdl: inlineWsdl ?? { url: `${endpoint}?WSDL` },
         endpoint,
       });
-      rawClients.set(endpoint, p);
+      rawClients.set(serviceKey, p);
       return p;
     };
 
     let wsfeAuthed: SoapClient | null = null;
     const getAuthed = async (): Promise<SoapClient> => {
       if (wsfeAuthed) return wsfeAuthed;
-      const raw = await getRaw(endpoints.wsfev1);
+      const raw = await getRaw("wsfev1");
       wsfeAuthed = withAuth({ soap: raw, wsaa, service: "wsfe" });
       return wsfeAuthed;
     };
@@ -187,15 +225,15 @@ export class Arca {
     };
 
     this.register = {
-      personaA4: async (cuit) => getPersonaA4(await getRaw(endpoints.padronA4), wsaa, cuit),
-      personaA10: async (cuit) => getPersonaA10(await getRaw(endpoints.padronA10), wsaa, cuit),
-      personaA13: async (cuit) => getPersonaA13(await getRaw(endpoints.padronA13), wsaa, cuit),
+      personaA4: async (cuit) => getPersonaA4(await getRaw("padronA4"), wsaa, cuit),
+      personaA10: async (cuit) => getPersonaA10(await getRaw("padronA10"), wsaa, cuit),
+      personaA13: async (cuit) => getPersonaA13(await getRaw("padronA13"), wsaa, cuit),
     };
 
     let fexAuthed: SoapClient | null = null;
     const getFexAuthed = async (): Promise<SoapClient> => {
       if (fexAuthed) return fexAuthed;
-      const raw = await getRaw(endpoints.wsfexv1);
+      const raw = await getRaw("wsfexv1");
       fexAuthed = withAuth({ soap: raw, wsaa, service: "wsfex" });
       return fexAuthed;
     };
@@ -211,7 +249,7 @@ export class Arca {
     let mtxcaAuthed: SoapClient | null = null;
     const getMtxcaAuthed = async (): Promise<SoapClient> => {
       if (mtxcaAuthed) return mtxcaAuthed;
-      const raw = await getRaw(endpoints.wsmtxca);
+      const raw = await getRaw("wsmtxca");
       mtxcaAuthed = withAuth({ soap: raw, wsaa, service: "wsmtxca" });
       return mtxcaAuthed;
     };
@@ -225,7 +263,7 @@ export class Arca {
     let cdcAuthed: SoapClient | null = null;
     const getCdcAuthed = async (): Promise<SoapClient> => {
       if (cdcAuthed) return cdcAuthed;
-      const raw = await getRaw(endpoints.wscdc);
+      const raw = await getRaw("wscdc");
       cdcAuthed = withAuth({ soap: raw, wsaa, service: "wscdc" });
       return cdcAuthed;
     };

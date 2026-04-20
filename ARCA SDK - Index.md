@@ -66,6 +66,7 @@ Unidades de trabajo chicas, una por componente. Cada una con API, criterios de a
 - [[21 - WSFEXv1 - Service]]
 - [[22 - WSMTXCA - Service]]
 - [[23 - WSCDC - Service]]
+- [[24 - WSDLs Embebidos]]
 
 ## Arquitectura
 

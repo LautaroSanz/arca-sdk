@@ -1,9 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import * as publicApi from "./index";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("public API shape", () => {
   it("exports SDK_VERSION", () => {
-    expect(publicApi.SDK_VERSION).toBe("0.5.0");
+    expect(publicApi.SDK_VERSION).toBe("0.6.0");
   });
 
   it("exports Arca class", () => {
@@ -54,6 +58,10 @@ describe("public API shape", () => {
   it("exports ENDPOINTS with both environments", () => {
     expect(publicApi.ENDPOINTS.testing.wsaa).toContain("afip");
     expect(publicApi.ENDPOINTS.production.wsaa).toContain("afip");
+  });
+
+  it("exports fetchWsdls helper", () => {
+    expect(typeof publicApi.fetchWsdls).toBe("function");
   });
 
   it("exports AccessTicket helpers", () => {
@@ -125,5 +133,39 @@ describe("Arca construction", () => {
           logger,
         }),
     ).not.toThrow();
+  });
+
+  it("accepts wsdls option without throwing", () => {
+    expect(
+      () =>
+        new publicApi.Arca({
+          cuit: "20111111112",
+          cert: "dummy-pem",
+          key: "dummy-pem",
+          environment: "testing",
+          wsdls: { wsfev1: "<wsdl-xml-here/>" },
+        }),
+    ).not.toThrow();
+  });
+});
+
+describe("fetchWsdls", () => {
+  it("fetches WSDL for each service and returns a record", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      return new Response("<wsdl/>", { status: 200 });
+    });
+    const wsdls = await publicApi.fetchWsdls("testing");
+    expect(fetchSpy).toHaveBeenCalledTimes(7);
+    expect(Object.keys(wsdls)).toHaveLength(7);
+    expect(wsdls.wsfev1).toBe("<wsdl/>");
+    expect(wsdls.wscdc).toBe("<wsdl/>");
+    expect(wsdls.padronA13).toBe("<wsdl/>");
+  });
+
+  it("throws when any fetch fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response("not found", { status: 404 }),
+    );
+    await expect(publicApi.fetchWsdls("testing")).rejects.toThrow(/HTTP 404/);
   });
 });
