@@ -45,6 +45,11 @@ import type {
   MtxcaUltimoResult,
 } from "./services/detailed-billing/operations/ultimo-autorizado";
 import type { ComprobanteCAERequest } from "./services/detailed-billing/types/request";
+import { cdcDummy } from "./services/verification/operations/dummy";
+import { constatar } from "./services/verification/operations/constatar";
+import type { CdcDummyResult } from "./services/verification/operations/dummy";
+import type { CmpReq } from "./services/verification/types/request";
+import type { ConstatarResult } from "./services/verification/types/response";
 import type {
   FeCaeSolicitarInput,
   FeCaeSolicitarResult,
@@ -69,7 +74,7 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.4.0" as const;
+export const SDK_VERSION = "0.5.0" as const;
 
 export interface ArcaOptions {
   cuit: string;
@@ -120,11 +125,17 @@ export interface DetailedBillingService {
   lastAuthorized(input: MtxcaUltimoInput): Promise<MtxcaUltimoResult>;
 }
 
+export interface VerificationService {
+  dummy(): Promise<CdcDummyResult>;
+  constatar(req: CmpReq): Promise<ConstatarResult>;
+}
+
 export class Arca {
   readonly electronicBilling: ElectronicBillingService;
   readonly register: RegisterService;
   readonly exportBilling: ExportBillingService;
   readonly detailedBilling: DetailedBillingService;
+  readonly verification: VerificationService;
 
   constructor(opts: ArcaOptions) {
     const wsaa = new WsaaClient({
@@ -210,6 +221,19 @@ export class Arca {
       createInvoice: async (input) => mtxcaAutorizar(await getMtxcaAuthed(), input),
       lastAuthorized: async (input) => mtxcaUltimoAutorizado(await getMtxcaAuthed(), input),
     };
+
+    let cdcAuthed: SoapClient | null = null;
+    const getCdcAuthed = async (): Promise<SoapClient> => {
+      if (cdcAuthed) return cdcAuthed;
+      const raw = await getRaw(endpoints.wscdc);
+      cdcAuthed = withAuth({ soap: raw, wsaa, service: "wscdc" });
+      return cdcAuthed;
+    };
+
+    this.verification = {
+      dummy: async () => cdcDummy(await getCdcAuthed()),
+      constatar: async (req) => constatar(await getCdcAuthed(), req),
+    };
   }
 }
 
@@ -253,6 +277,7 @@ export {
   WsfexError,
   WsPadronError,
   WsMtxcaError,
+  WsCdcError,
   TimeSkewError,
   isRetryable,
 } from "./core/errors";
@@ -270,6 +295,8 @@ export type {
   WsPadronErrorOptions,
   WsMtxcaErrorCode,
   WsMtxcaErrorOptions,
+  WsCdcErrorCode,
+  WsCdcErrorOptions,
 } from "./core/errors";
 
 export type {
@@ -317,6 +344,16 @@ export type {
   MtxcaUltimoInput,
   MtxcaUltimoResult,
 } from "./services/detailed-billing/operations/ultimo-autorizado";
+
+export type { CmpReq } from "./services/verification/types/request";
+export type {
+  ConstatarResult,
+  CdcResultado,
+  CdcEvento,
+  CdcObservacion,
+  CdcApiError,
+} from "./services/verification/types/response";
+export type { CdcDummyResult } from "./services/verification/operations/dummy";
 
 export type {
   PersonaReturn,

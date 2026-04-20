@@ -85,3 +85,24 @@ export class WsMtxcaError extends WsnError {
     this.code = code;
   }
 }
+
+export type WsCdcErrorCode = `CDC.${string}`;
+
+export interface WsCdcErrorOptions {
+  message?: string;
+  cause?: unknown;
+  context?: Record<string, unknown>;
+}
+
+export class WsCdcError extends WsnError {
+  readonly code: WsCdcErrorCode;
+
+  constructor(code: WsCdcErrorCode, opts: WsCdcErrorOptions = {}) {
+    super({
+      message: opts.message ?? code,
+      cause: opts.cause,
+      context: opts.context,
+    });
+    this.code = code;
+  }
+}

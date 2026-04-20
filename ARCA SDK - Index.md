@@ -65,6 +65,7 @@ Unidades de trabajo chicas, una por componente. Cada una con API, criterios de a
 - [[20 - Padron - Service]]
 - [[21 - WSFEXv1 - Service]]
 - [[22 - WSMTXCA - Service]]
+- [[23 - WSCDC - Service]]
 
 ## Arquitectura
 

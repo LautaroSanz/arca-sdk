@@ -3,7 +3,7 @@ import * as publicApi from "./index";
 
 describe("public API shape", () => {
   it("exports SDK_VERSION", () => {
-    expect(publicApi.SDK_VERSION).toBe("0.4.0");
+    expect(publicApi.SDK_VERSION).toBe("0.5.0");
   });
 
   it("exports Arca class", () => {
@@ -23,11 +23,13 @@ describe("public API shape", () => {
     expect(publicApi.WsPadronError).toBeDefined();
     expect(publicApi.WsfexError).toBeDefined();
     expect(publicApi.WsMtxcaError).toBeDefined();
+    expect(publicApi.WsCdcError).toBeDefined();
     expect(new publicApi.ConfigError("CONFIG.X")).toBeInstanceOf(publicApi.ArcaError);
     expect(new publicApi.DuplicateInvoiceError()).toBeInstanceOf(publicApi.WsfeError);
     expect(new publicApi.WsPadronError("PADRON.X")).toBeInstanceOf(publicApi.WsnError);
     expect(new publicApi.WsfexError("WSFEX.X")).toBeInstanceOf(publicApi.WsnError);
     expect(new publicApi.WsMtxcaError("MTXCA.X")).toBeInstanceOf(publicApi.WsnError);
+    expect(new publicApi.WsCdcError("CDC.X")).toBeInstanceOf(publicApi.WsnError);
   });
 
   it("exports isRetryable helper", () => {
@@ -103,6 +105,8 @@ describe("Arca construction", () => {
     expect(typeof arca.detailedBilling.dummy).toBe("function");
     expect(typeof arca.detailedBilling.createInvoice).toBe("function");
     expect(typeof arca.detailedBilling.lastAuthorized).toBe("function");
+    expect(typeof arca.verification.dummy).toBe("function");
+    expect(typeof arca.verification.constatar).toBe("function");
   });
 
   it("accepts custom storage, clock, and logger", () => {

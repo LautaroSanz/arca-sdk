@@ -14,6 +14,11 @@ describe("ENDPOINTS", () => {
     expect(testingKeys).toEqual(productionKeys);
   });
 
+  it("includes wscdc in both environments", () => {
+    expect(ENDPOINTS.testing.wscdc).toContain("WSCDC");
+    expect(ENDPOINTS.production.wscdc).toContain("WSCDC");
+  });
+
   it.each(envs)("all URLs for %s point to afip (gov.ar or gob.ar)", (env) => {
     for (const url of Object.values(ENDPOINTS[env])) {
       expect(url).toMatch(/afip\.go[vb]\.ar/);
