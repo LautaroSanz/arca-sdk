@@ -10,9 +10,7 @@ export interface AuthProxyOptions {
 }
 
 function defaultShouldAuthenticate(method: string): boolean {
-  if (/^FEDummy$/i.test(method)) return false;
-  if (/^Dummy$/i.test(method)) return false;
-  if (/_Dummy$/i.test(method)) return false;
+  if (/Dummy$/i.test(method)) return false;
   return true;
 }
 

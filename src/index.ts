@@ -20,6 +20,21 @@ import { getPersonaA4 } from "./services/register/operations/a4";
 import { getPersonaA10 } from "./services/register/operations/a10";
 import { getPersonaA13 } from "./services/register/operations/a13";
 import type { PersonaReturn } from "./services/register/types/persona";
+import { fexDummy } from "./services/export-billing/operations/dummy";
+import { fexAuthorize } from "./services/export-billing/operations/authorize";
+import { fexLastCmp } from "./services/export-billing/operations/last-cmp";
+import { fexLastId } from "./services/export-billing/operations/last-id";
+import { fexCotizacion } from "./services/export-billing/operations/cotizacion";
+import type {
+  FexAuthorizeInput,
+  FexAuthorizeResult,
+} from "./services/export-billing/operations/authorize";
+import type {
+  FexLastCmpInput,
+  FexLastCmpResult,
+} from "./services/export-billing/operations/last-cmp";
+import type { FexDummyResult } from "./services/export-billing/operations/dummy";
+import type { FEXResultCotiz } from "./services/export-billing/types/response";
 import type {
   FeCaeSolicitarInput,
   FeCaeSolicitarResult,
@@ -44,7 +59,7 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.2.0" as const;
+export const SDK_VERSION = "0.3.0" as const;
 
 export interface ArcaOptions {
   cuit: string;
@@ -81,9 +96,18 @@ export interface RegisterService {
   personaA13(cuit: number | string): Promise<PersonaReturn>;
 }
 
+export interface ExportBillingService {
+  dummy(): Promise<FexDummyResult>;
+  createInvoice(input: FexAuthorizeInput): Promise<FexAuthorizeResult>;
+  lastAuthorized(input: FexLastCmpInput): Promise<FexLastCmpResult>;
+  lastId(): Promise<{ Id: number }>;
+  cotizacion(monId: string): Promise<FEXResultCotiz>;
+}
+
 export class Arca {
   readonly electronicBilling: ElectronicBillingService;
   readonly register: RegisterService;
+  readonly exportBilling: ExportBillingService;
 
   constructor(opts: ArcaOptions) {
     const wsaa = new WsaaClient({
@@ -139,6 +163,22 @@ export class Arca {
       personaA10: async (cuit) => getPersonaA10(await getRaw(endpoints.padronA10), wsaa, cuit),
       personaA13: async (cuit) => getPersonaA13(await getRaw(endpoints.padronA13), wsaa, cuit),
     };
+
+    let fexAuthed: SoapClient | null = null;
+    const getFexAuthed = async (): Promise<SoapClient> => {
+      if (fexAuthed) return fexAuthed;
+      const raw = await getRaw(endpoints.wsfexv1);
+      fexAuthed = withAuth({ soap: raw, wsaa, service: "wsfex" });
+      return fexAuthed;
+    };
+
+    this.exportBilling = {
+      dummy: async () => fexDummy(await getFexAuthed()),
+      createInvoice: async (input) => fexAuthorize(await getFexAuthed(), input),
+      lastAuthorized: async (input) => fexLastCmp(await getFexAuthed(), input),
+      lastId: async () => fexLastId(await getFexAuthed()),
+      cotizacion: async (monId) => fexCotizacion(await getFexAuthed(), monId),
+    };
   }
 }
 
@@ -179,6 +219,7 @@ export {
   SoapError,
   WsnError,
   WsfeError,
+  WsfexError,
   WsPadronError,
   TimeSkewError,
   isRetryable,
@@ -191,9 +232,38 @@ export type {
   WsaaErrorOptions,
   SoapErrorCode,
   WsfeErrorCode,
+  WsfexErrorCode,
+  WsfexErrorOptions,
   WsPadronErrorCode,
   WsPadronErrorOptions,
 } from "./core/errors";
+
+export type {
+  Cmp,
+  Item,
+  Permiso,
+  CmpAsoc,
+  CbteTipoExport,
+  TipoExpo,
+  IdiomaCbte,
+  PermisoExistente,
+  FEXResultAuth,
+  FEXResultGet,
+  FEXResultID,
+  FEXResultCotiz,
+  FexErr,
+  FexEvent,
+  FexResultCode,
+} from "./services/export-billing/types";
+export type {
+  FexAuthorizeInput,
+  FexAuthorizeResult,
+} from "./services/export-billing/operations/authorize";
+export type {
+  FexLastCmpInput,
+  FexLastCmpResult,
+} from "./services/export-billing/operations/last-cmp";
+export type { FexDummyResult } from "./services/export-billing/operations/dummy";
 
 export type {
   PersonaReturn,

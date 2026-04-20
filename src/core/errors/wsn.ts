@@ -23,6 +23,27 @@ export class WsfeError extends WsnError {
   }
 }
 
+export type WsfexErrorCode = `WSFEX.${string}`;
+
+export interface WsfexErrorOptions {
+  message?: string;
+  cause?: unknown;
+  context?: Record<string, unknown>;
+}
+
+export class WsfexError extends WsnError {
+  readonly code: WsfexErrorCode;
+
+  constructor(code: WsfexErrorCode, opts: WsfexErrorOptions = {}) {
+    super({
+      message: opts.message ?? code,
+      cause: opts.cause,
+      context: opts.context,
+    });
+    this.code = code;
+  }
+}
+
 export type WsPadronErrorCode = `PADRON.${string}`;
 
 export interface WsPadronErrorOptions {
