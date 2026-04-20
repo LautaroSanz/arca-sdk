@@ -1,10 +1,7 @@
 import { WsfeError } from "../../core/errors/wsn";
 import type { ArcaApiError } from "./types/response";
 
-export function asArray<T>(val: T | T[] | null | undefined): T[] {
-  if (val === undefined || val === null) return [];
-  return Array.isArray(val) ? val : [val];
-}
+export { asArray } from "../../core/utils";
 
 export function throwWsfeIfErrors(errors: ArcaApiError[], context?: Record<string, unknown>): void {
   if (errors.length === 0) return;

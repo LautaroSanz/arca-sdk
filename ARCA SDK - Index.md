@@ -60,6 +60,10 @@ Unidades de trabajo chicas, una por componente. Cada una con API, criterios de a
 
 - [[19 - Fachada Principal - index.ts]]
 
+### Post-v0.1 — Servicios adicionales
+
+- [[20 - Padron - Service]]
+
 ## Arquitectura
 
 - [[ARCA - Contexto General]] — Que es ARCA, historia, alcance

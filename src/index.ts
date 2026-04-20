@@ -16,6 +16,10 @@ import {
   getPtosVenta,
   getCotizacion,
 } from "./services/electronic-billing/operations/params";
+import { getPersonaA4 } from "./services/register/operations/a4";
+import { getPersonaA10 } from "./services/register/operations/a10";
+import { getPersonaA13 } from "./services/register/operations/a13";
+import type { PersonaReturn } from "./services/register/types/persona";
 import type {
   FeCaeSolicitarInput,
   FeCaeSolicitarResult,
@@ -40,7 +44,7 @@ import type { TicketStorage } from "./core/storage/ticket-storage";
 import type { NtpClock } from "./core/wsaa/ntp";
 import type { Logger } from "./core/logging/logger";
 
-export const SDK_VERSION = "0.1.0" as const;
+export const SDK_VERSION = "0.2.0" as const;
 
 export interface ArcaOptions {
   cuit: string;
@@ -71,8 +75,15 @@ export interface ElectronicBillingService {
   params: ElectronicBillingParams;
 }
 
+export interface RegisterService {
+  personaA4(cuit: number | string): Promise<PersonaReturn>;
+  personaA10(cuit: number | string): Promise<PersonaReturn>;
+  personaA13(cuit: number | string): Promise<PersonaReturn>;
+}
+
 export class Arca {
   readonly electronicBilling: ElectronicBillingService;
+  readonly register: RegisterService;
 
   constructor(opts: ArcaOptions) {
     const wsaa = new WsaaClient({
@@ -85,17 +96,25 @@ export class Arca {
       ...(opts.logger ? { logger: opts.logger } : {}),
     });
 
-    const wsfev1Endpoint = ENDPOINTS[opts.environment].wsfev1;
-    let authed: SoapClient | null = null;
-
-    const getAuthed = async (): Promise<SoapClient> => {
-      if (authed) return authed;
-      const raw = await createSoapClient({
-        wsdl: { url: `${wsfev1Endpoint}?WSDL` },
-        endpoint: wsfev1Endpoint,
+    const endpoints = ENDPOINTS[opts.environment];
+    const rawClients = new Map<string, Promise<SoapClient>>();
+    const getRaw = (endpoint: string): Promise<SoapClient> => {
+      let p = rawClients.get(endpoint);
+      if (p) return p;
+      p = createSoapClient({
+        wsdl: { url: `${endpoint}?WSDL` },
+        endpoint,
       });
-      authed = withAuth({ soap: raw, wsaa, service: "wsfe" });
-      return authed;
+      rawClients.set(endpoint, p);
+      return p;
+    };
+
+    let wsfeAuthed: SoapClient | null = null;
+    const getAuthed = async (): Promise<SoapClient> => {
+      if (wsfeAuthed) return wsfeAuthed;
+      const raw = await getRaw(endpoints.wsfev1);
+      wsfeAuthed = withAuth({ soap: raw, wsaa, service: "wsfe" });
+      return wsfeAuthed;
     };
 
     this.electronicBilling = {
@@ -113,6 +132,12 @@ export class Arca {
         ptosVenta: async () => getPtosVenta(await getAuthed()),
         cotizacion: async (monId: string) => getCotizacion(await getAuthed(), monId),
       },
+    };
+
+    this.register = {
+      personaA4: async (cuit) => getPersonaA4(await getRaw(endpoints.padronA4), wsaa, cuit),
+      personaA10: async (cuit) => getPersonaA10(await getRaw(endpoints.padronA10), wsaa, cuit),
+      personaA13: async (cuit) => getPersonaA13(await getRaw(endpoints.padronA13), wsaa, cuit),
     };
   }
 }
@@ -154,6 +179,7 @@ export {
   SoapError,
   WsnError,
   WsfeError,
+  WsPadronError,
   TimeSkewError,
   isRetryable,
 } from "./core/errors";
@@ -165,4 +191,15 @@ export type {
   WsaaErrorOptions,
   SoapErrorCode,
   WsfeErrorCode,
+  WsPadronErrorCode,
+  WsPadronErrorOptions,
 } from "./core/errors";
+
+export type {
+  PersonaReturn,
+  Domicilio,
+  Actividad,
+  Impuesto,
+  CategoriaMonotributo,
+  TipoPersona,
+} from "./services/register/types/persona";
