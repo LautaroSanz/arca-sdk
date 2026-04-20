@@ -23,11 +23,23 @@ No tocan red ni filesystem real (salvo `os.tmpdir`).
 - Gate: variable de entorno `ARCA_INTEGRATION=1`
 - Requiere: cert + key de homologacion, CUIT, WSN habilitado.
 
+Env vars reconocidas por los tests:
+
+| Variable | Requerida | Proposito |
+|---|---|---|
+| `ARCA_INTEGRATION=1` | si | Habilita los tests de integracion (sin esto, skip) |
+| `ARCA_TEST_CUIT` | si | CUIT de homologacion |
+| `ARCA_TEST_CERT` o `ARCA_TEST_CERT_PATH` | si | PEM inline o ruta al archivo |
+| `ARCA_TEST_KEY` o `ARCA_TEST_KEY_PATH` | si | PEM inline o ruta al archivo |
+| `ARCA_EMIT_REAL=1` | para CAE | Gate extra para emitir comprobantes reales |
+| `ARCA_TEST_PTOVTA` | opcional | Punto de venta para tests de emision (default 1) |
+
 Cubren:
 
-- Login contra WSAA real
+- Login contra WSAA real (`wsaa.test.ts`): ticket + cache
 - `FEDummy` del WSFEv1
 - Consultas de parametros (`FEParamGet*`)
+- `FECompUltimoAutorizado` como read-only
 - Solicitud de CAE (flag extra `ARCA_EMIT_REAL=1` por seguridad)
 
 ### 3. Contract tests (snapshot)
